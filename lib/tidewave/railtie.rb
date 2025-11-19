@@ -4,8 +4,8 @@ require "logger"
 require "fileutils"
 require "tidewave/configuration"
 require "tidewave/middleware"
-require "tidewave/exceptions_middleware"
 require "tidewave/quiet_requests_middleware"
+require "tidewave/exceptions_middleware"
 
 gem_tools_path = File.expand_path("tools/**/*.rb", __dir__)
 Dir[gem_tools_path].each { |f| require f }
@@ -15,8 +15,16 @@ module Tidewave
     config.tidewave = Tidewave::Configuration.new()
 
     initializer "tidewave.setup" do |app|
-      unless app.config.enable_reloading
-        raise "For security reasons, Tidewave is only supported in environments where config.enable_reloading is true (typically development)"
+      # Skip if not explicitly enabled
+      unless app.config.tidewave.enabled
+        Rails.logger.info "[Tidewave] Skipped: not enabled (set config.tidewave.enabled = true or USE_MOUNTED_VIBES=true)"
+        next
+      end
+
+      # In local dev, no restrictions. In production, require explicit opt-in.
+      unless app.config.enable_reloading || app.config.tidewave.production_mode?
+        Rails.logger.warn "[Tidewave] Skipped: not in development and not in production mode"
+        next
       end
 
       app.config.middleware.insert_after(
@@ -24,28 +32,20 @@ module Tidewave
         Tidewave::Middleware,
         app.config.tidewave
       )
-
-      app.config.after_initialize do
-        # If the user configured CSP, we need to alter it in dev
-        # to allow TC to run browser_eval.
-        app.config.content_security_policy.try do |content_security_policy|
-          content_security_policy.directives["script-src"].try do |script_src|
-            script_src << "'unsafe-eval'" unless script_src.include?("'unsafe-eval'")
-          end
-
-          content_security_policy.directives.delete("frame-ancestors")
-        end
-      end
     end
 
-    initializer "tidewave.intercept_exceptions" do |app|
-      # We intercept exceptions from DebugExceptions, format the
-      # information as text and inject into the exception page html.
-      ActionDispatch::DebugExceptions.register_interceptor do |request, exception|
-        request.set_header("tidewave.exception", exception)
-      end
-
-      app.middleware.insert_before(ActionDispatch::DebugExceptions, Tidewave::ExceptionsMiddleware)
+    # Exception tracking: Captures backend exceptions for AI debugging
+    # Frontend errors tracked by iframe bridge, backend errors tracked here
+    # Makes exceptions queryable via get_logs tool
+    initializer "tidewave.exceptions" do |app|
+      next unless app.config.tidewave.enabled
+      
+      # Insert after ShowExceptions so we can read action_dispatch.exception
+      # But before other middleware that might handle errors
+      app.config.middleware.insert_after(
+        ActionDispatch::ShowExceptions,
+        Tidewave::ExceptionsMiddleware
+      )
     end
 
     initializer "tidewave.logging" do |app|
