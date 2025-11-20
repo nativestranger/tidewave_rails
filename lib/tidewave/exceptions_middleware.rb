@@ -16,6 +16,8 @@
 class Tidewave::ExceptionsMiddleware
   def initialize(app)
     @app = app
+    # Log that middleware is loaded (appears in app boot logs)
+    Rails.logger.info "✅ [Boot] Tidewave::ExceptionsMiddleware loaded" if defined?(Rails.logger)
   end
 
   def call(env)

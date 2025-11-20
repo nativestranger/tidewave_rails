@@ -22,7 +22,35 @@ class Tidewave::Tools::GetLogs < Tidewave::Tools::Base
       Rails.root.join("log", "#{Rails.env}.log")
     end
     
-    return "Log file not found at #{log_file}" unless File.exist?(log_file)
+    unless File.exist?(log_file)
+      return <<~MSG.strip
+        Log file not found at: #{log_file}
+        
+        Debug info:
+        - Rails.env: #{Rails.env}
+        - USE_MOUNTED_VIBES: #{ENV['USE_MOUNTED_VIBES'] || 'not set'}
+        - /mnt/data/code exists: #{Dir.exist?('/mnt/data/code')}
+        - Rails.root: #{Rails.root}
+        
+        Possible causes:
+        1. App hasn't processed any requests yet (no logs written)
+        2. Dual logger not initialized (check boot logs for "Dual logger initialized")
+        3. Log directory permissions issue (check chown rails:rails)
+      MSG
+    end
+    
+    file_size = File.size(log_file)
+    if file_size == 0
+      return <<~MSG.strip
+        Log file exists but is empty: #{log_file}
+        
+        This means:
+        - Dual logger initialized successfully
+        - But no logs have been written yet
+        - Try making a request to your app first
+        - Or trigger an exception to test logging
+      MSG
+    end
 
     regex = Regexp.new(grep, Regexp::IGNORECASE) if grep
     matching_lines = []
@@ -32,6 +60,21 @@ class Tidewave::Tools::GetLogs < Tidewave::Tools::Base
         matching_lines.unshift(line)
         break if matching_lines.size >= tail
       end
+    end
+
+    if matching_lines.empty?
+      return <<~MSG.strip
+        No matching logs found in #{log_file}
+        
+        File size: #{file_size} bytes
+        Filter: #{grep || 'none'}
+        Tail: #{tail} lines
+        
+        Try:
+        - Remove the filter to see all logs
+        - Increase tail count
+        - Make requests to generate more logs
+      MSG
     end
 
     matching_lines.join
