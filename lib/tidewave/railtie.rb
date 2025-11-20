@@ -37,24 +37,13 @@ module Tidewave
     # Exception tracking: Captures backend exceptions for AI debugging
     # Frontend errors tracked by iframe bridge, backend errors tracked here
     # Makes exceptions queryable via get_logs tool
-    initializer "tidewave.exceptions", after: "concise_errors.swap_middleware" do |app|
+    initializer "tidewave.exceptions" do |app|
       next unless app.config.tidewave.enabled
       
-      # Insert after ShowExceptions (or ConciseErrors::ShowExceptions if swapped)
-      # ConciseErrors only swaps ShowExceptions in production (not development)
-      # Try ConciseErrors first, fall back to ActionDispatch if not found
-      begin
-        app.config.middleware.insert_after(
-          ConciseErrors::ShowExceptions,
-          Tidewave::ExceptionsMiddleware
-        )
-      rescue RuntimeError, NameError
-        # ConciseErrors not in stack (development) or not defined
-        app.config.middleware.insert_after(
-          ActionDispatch::ShowExceptions,
-          Tidewave::ExceptionsMiddleware
-        )
-      end
+      # Judo move: Just append to stack, middleware checks for exception internally
+      # Works with any ShowExceptions implementation (ActionDispatch or ConciseErrors)
+      # No need to detect which middleware is present
+      app.config.middleware.use Tidewave::ExceptionsMiddleware
     end
 
     initializer "tidewave.logging" do |app|
