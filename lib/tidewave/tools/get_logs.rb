@@ -57,10 +57,13 @@ class Tidewave::Tools::GetLogs < Tidewave::Tools::Base
 
     tail_lines(log_file) do |line|
       if regex.nil? || line.match?(regex)
-        matching_lines.unshift(line)
+        matching_lines.push(line) # FIXED: push instead of unshift to maintain newest-first order
         break if matching_lines.size >= tail
       end
     end
+    
+    # Reverse to show oldest-first (chronological), with newest at bottom
+    matching_lines.reverse!
 
     if matching_lines.empty?
       return <<~MSG.strip
