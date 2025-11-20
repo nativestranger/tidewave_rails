@@ -27,18 +27,24 @@ class Tidewave::ExceptionsMiddleware
     begin
       status, headers, body = @app.call(env)
       
-      # Check if Rails captured an exception (set by ShowExceptions middleware)
-      exception = request.get_header("action_dispatch.exception")
+      # Check BOTH env keys - different middleware use different keys
+      exception = request.get_header("action_dispatch.exception") || 
+                  request.get_header("action_dispatch.show_detailed_exceptions.exception")
       
       if exception
         log_exception(exception, request, request_id, status)
       end
       
+      # Also check if concise_errors set an exception in env
+      if env['concise_errors.exception']
+        log_exception(env['concise_errors.exception'], request, request_id, status)
+      end
+      
       [ status, headers, body ]
     rescue => error
-      # Middleware-level exception (shouldn't happen, but defensive)
+      # Catch exceptions at middleware level (before ShowExceptions/ConciseErrors)
       log_exception(error, request, request_id, 500)
-      raise error
+      raise error # Re-raise so error page still displays
     end
   end
 
