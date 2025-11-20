@@ -14,8 +14,15 @@ class Tidewave::Tools::GetLogs < Tidewave::Tools::Base
   end
 
   def call(tail:, grep: nil)
-    log_file = Rails.root.join("log", "#{Rails.env}.log")
-    return "Log file not found" unless File.exist?(log_file)
+    # Check for mounted mode first (dual logger writes here)
+    # Fallback to image mode (/rails/log/) if not mounted
+    log_file = if ENV['USE_MOUNTED_VIBES'] == 'true' && Dir.exist?('/mnt/data/code')
+      Pathname.new('/mnt/data/code/log/production.log')
+    else
+      Rails.root.join("log", "#{Rails.env}.log")
+    end
+    
+    return "Log file not found at #{log_file}" unless File.exist?(log_file)
 
     regex = Regexp.new(grep, Regexp::IGNORECASE) if grep
     matching_lines = []
