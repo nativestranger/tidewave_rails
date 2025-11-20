@@ -40,10 +40,17 @@ module Tidewave
     initializer "tidewave.exceptions" do |app|
       next unless app.config.tidewave.enabled
       
-      # Insert after ShowExceptions so we can read action_dispatch.exception
-      # But before other middleware that might handle errors
+      # Insert after ShowExceptions (or ConciseErrors::ShowExceptions if swapped)
+      # ConciseErrors gem swaps ActionDispatch::ShowExceptions, so check for both
+      show_exceptions_class = if defined?(ConciseErrors::ShowExceptions) && 
+                                 app.config.middleware.include?(ConciseErrors::ShowExceptions)
+        ConciseErrors::ShowExceptions
+      else
+        ActionDispatch::ShowExceptions
+      end
+      
       app.config.middleware.insert_after(
-        ActionDispatch::ShowExceptions,
+        show_exceptions_class,
         Tidewave::ExceptionsMiddleware
       )
     end
