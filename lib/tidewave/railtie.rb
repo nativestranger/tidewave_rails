@@ -41,18 +41,20 @@ module Tidewave
       next unless app.config.tidewave.enabled
       
       # Insert after ShowExceptions (or ConciseErrors::ShowExceptions if swapped)
-      # ConciseErrors runs before our initializer and swaps ActionDispatch::ShowExceptions
-      # Check if ConciseErrors is defined (gem loaded) to determine which class to use
-      show_exceptions_class = if defined?(ConciseErrors::ShowExceptions)
-        ConciseErrors::ShowExceptions
-      else
-        ActionDispatch::ShowExceptions
+      # ConciseErrors only swaps ShowExceptions in production (not development)
+      # Try ConciseErrors first, fall back to ActionDispatch if not found
+      begin
+        app.config.middleware.insert_after(
+          ConciseErrors::ShowExceptions,
+          Tidewave::ExceptionsMiddleware
+        )
+      rescue RuntimeError, NameError
+        # ConciseErrors not in stack (development) or not defined
+        app.config.middleware.insert_after(
+          ActionDispatch::ShowExceptions,
+          Tidewave::ExceptionsMiddleware
+        )
       end
-      
-      app.config.middleware.insert_after(
-        show_exceptions_class,
-        Tidewave::ExceptionsMiddleware
-      )
     end
 
     initializer "tidewave.logging" do |app|
