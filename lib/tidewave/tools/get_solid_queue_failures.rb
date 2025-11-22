@@ -12,30 +12,23 @@ module Tidewave
     #   tool.call(limit: 50, queue_name: 'default')
     #
     class GetSolidQueueFailures < Base
-      def self.definition
-        {
-          name: 'get_solid_queue_failures',
-          description: 'Get failed SolidQueue background jobs with error details, arguments, and backtraces',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              limit: { 
-                type: 'number', 
-                description: 'Maximum number of failures to return (default: 50, max: 500)', 
-                default: 50 
-              },
-              queue_name: { 
-                type: 'string', 
-                description: 'Filter by queue name (optional, e.g., "default", "mailers")' 
-              },
-              job_class: {
-                type: 'string',
-                description: 'Filter by job class name (optional, e.g., "UserMailerJob")'
-              }
-            }
-          }
-        }
-      end
+      tool_name "get_solid_queue_failures"
+      description "Get failed SolidQueue background jobs with error details, arguments, and backtraces"
+      
+      argument :limit, 
+        type: "number",
+        description: "Maximum number of failures to return (default: 50, max: 500)",
+        default: 50
+      
+      argument :queue_name,
+        type: "string", 
+        description: "Filter by queue name (optional, e.g., 'default', 'mailers')",
+        required: false
+      
+      argument :job_class,
+        type: "string",
+        description: "Filter by job class name (optional, e.g., 'UserMailerJob')",
+        required: false
 
       def call(limit: 50, queue_name: nil, job_class: nil)
         # Validate SolidQueue availability
