@@ -51,20 +51,20 @@ if ASYNC_JOB_AVAILABLE
         message: "#{source} log not found at #{log_file}. #{not_found_help(source)}"
       }.to_json
     end
-      
-      # Read log file and parse structured entries
-      jobs = parse_async_job_logs(log_file, tail * 2, grep) # 2x for filtering
-      
-      # Limit to requested count
-      jobs = jobs.first(tail)
-      
-      {
-        jobs: jobs,
-        count: jobs.size,
-        source: source,
-        total_in_log: File.size(log_file)
-      }.to_json
-    end
+    
+    # Read log file and parse structured entries
+    jobs = parse_async_job_logs(log_file, tail * 2, grep) # 2x for filtering
+    
+    # Limit to requested count
+    jobs = jobs.first(tail)
+    
+    {
+      jobs: jobs,
+      count: jobs.size,
+      source: source,
+      total_in_log: File.size(log_file)
+    }.to_json
+  end
 
     private
     
