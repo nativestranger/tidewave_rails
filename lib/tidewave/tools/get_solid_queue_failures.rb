@@ -13,22 +13,25 @@ module Tidewave
     #
     class GetSolidQueueFailures < Base
       tool_name "get_solid_queue_failures"
-      description "Get failed SolidQueue background jobs with error details, arguments, and backtraces"
+      description <<~DESCRIPTION
+        Get failed SolidQueue background jobs with error details, arguments, and backtraces.
+        
+        Returns comprehensive failure information including:
+        - Job class, queue, and priority
+        - Exception class and error message
+        - Full backtrace for debugging
+        - Job arguments (serialized)
+        - Enqueued and failed timestamps
+        
+        Note: Only available when SolidQueue is configured. For async-job failures,
+        use get_async_job_logs tool instead.
+      DESCRIPTION
       
-      argument :limit, 
-        type: "number",
-        description: "Maximum number of failures to return (default: 50, max: 500)",
-        default: 50
-      
-      argument :queue_name,
-        type: "string", 
-        description: "Filter by queue name (optional, e.g., 'default', 'mailers')",
-        required: false
-      
-      argument :job_class,
-        type: "string",
-        description: "Filter by job class name (optional, e.g., 'UserMailerJob')",
-        required: false
+      arguments do
+        optional(:limit).filled(:integer).description("Maximum number of failures to return (default: 50, max: 500)")
+        optional(:queue_name).filled(:string).description("Filter by queue name (e.g., 'default', 'mailers')")
+        optional(:job_class).filled(:string).description("Filter by job class name (e.g., 'UserMailerJob')")
+      end
 
       def call(limit: 50, queue_name: nil, job_class: nil)
         # Validate SolidQueue availability
