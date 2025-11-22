@@ -113,21 +113,7 @@ module Tidewave
       mode == :full
     end
     
-    private
-    
-    # Default log path for async job logs
-    # 
-    # Simple default: Rails.root/log
-    # Apps can override via:
-    #   config.async_job_exceptions_file = '/custom/path.log'
-    #
-    # For Docker deployments with persistent volumes, the app should
-    # configure paths to point to volume-mounted directories.
-    def default_log_path(filename)
-      Rails.root.join('log', filename).to_s
-    end
-    
-    # MCP info for health endpoint (better encapsulation than middleware class method)
+    # MCP info for health endpoint (must be public for health controller)
     def mcp_info_for_health
       return nil unless enabled
       
@@ -150,6 +136,20 @@ module Tidewave
         version: Tidewave::VERSION,
         endpoint: '/tidewave/mcp'
       }
+    end
+    
+    private
+    
+    # Default log path for async job logs
+    # 
+    # Simple default: Rails.root/log
+    # Apps can override via:
+    #   config.async_job_exceptions_file = '/custom/path.log'
+    #
+    # For Docker deployments with persistent volumes, the app should
+    # configure paths to point to volume-mounted directories.
+    def default_log_path(filename)
+      Rails.root.join('log', filename).to_s
     end
   end
 end
