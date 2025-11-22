@@ -95,21 +95,7 @@ module Tidewave
       @production_log_file = value
     end
     
-    private
-    
-    # Default log path for async job logs
-    # 
-    # Simple default: Rails.root/log
-    # Apps can override via:
-    #   config.async_job_exceptions_file = '/custom/path.log'
-    #
-    # For Docker deployments with persistent volumes, the app should
-    # configure paths to point to volume-mounted directories.
-    def default_log_path(filename)
-      Rails.root.join('log', filename).to_s
-    end
-    
-    # Helper methods for mode detection
+    # Helper methods for mode detection (must be public for middleware)
     def production_mode?
       # Production mode = explicitly enabled outside of dev
       enabled && !Rails.env.development?
@@ -125,6 +111,20 @@ module Tidewave
     
     def full_mode?
       mode == :full
+    end
+    
+    private
+    
+    # Default log path for async job logs
+    # 
+    # Simple default: Rails.root/log
+    # Apps can override via:
+    #   config.async_job_exceptions_file = '/custom/path.log'
+    #
+    # For Docker deployments with persistent volumes, the app should
+    # configure paths to point to volume-mounted directories.
+    def default_log_path(filename)
+      Rails.root.join('log', filename).to_s
     end
     
     # MCP info for health endpoint (better encapsulation than middleware class method)
