@@ -102,14 +102,22 @@ if ASYNC_JOB_AVAILABLE
       in_backtrace = false
       regex = grep_pattern ? Regexp.new(grep_pattern, Regexp::IGNORECASE) : nil
       
-      # Read from end of file (newest first)
+      # Collect lines from tail (newest to oldest)
+      lines = []
       tail_lines(log_file) do |line|
+        lines << line
+        break if lines.size >= limit * 20 # Get enough lines to parse limit jobs
+      end
+      
+      # Reverse to parse forward (oldest to newest in this batch)
+      lines.reverse!
+      
+      lines.each do |line|
         # New job entry
         if line.match(/\[(ASYNC_JOB_(?:EXCEPTION|SUCCESS))\] \[([^\]]+)\] (.+)/)
           # Save previous job
-          if current_job
-            jobs << current_job if grep_match?(current_job, regex)
-            break if jobs.size >= limit
+          if current_job && grep_match?(current_job, regex)
+            jobs << current_job
           end
           
           current_job = {
@@ -148,8 +156,10 @@ if ASYNC_JOB_AVAILABLE
         jobs << current_job
       end
       
-      # Reverse to chronological order (oldest first)
-      jobs.reverse
+      # Reverse to show newest-first
+      jobs.reverse!
+      
+      jobs
     end
     
     def grep_match?(job, regex)
