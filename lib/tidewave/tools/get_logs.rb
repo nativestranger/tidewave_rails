@@ -14,10 +14,10 @@ class Tidewave::Tools::GetLogs < Tidewave::Tools::Base
   end
 
   def call(tail:, grep: nil)
-    # Check for mounted mode first (dual logger writes here)
-    # Fallback to image mode (/rails/log/) if not mounted
-    log_file = if ENV['USE_MOUNTED_VIBES'] == 'true' && Dir.exist?('/mnt/data/code')
-      Pathname.new('/mnt/data/code/log/production.log')
+    # Use configured production log path (app can override via config.tidewave.production_log_file)
+    # Falls back to Rails.root/log/#{Rails.env}.log
+    log_file = if Rails.application.config.tidewave.respond_to?(:production_log_file)
+      Pathname.new(Rails.application.config.tidewave.production_log_file)
     else
       Rails.root.join("log", "#{Rails.env}.log")
     end
@@ -28,14 +28,12 @@ class Tidewave::Tools::GetLogs < Tidewave::Tools::Base
         
         Debug info:
         - Rails.env: #{Rails.env}
-        - USE_MOUNTED_VIBES: #{ENV['USE_MOUNTED_VIBES'] || 'not set'}
-        - /mnt/data/code exists: #{Dir.exist?('/mnt/data/code')}
         - Rails.root: #{Rails.root}
         
         Possible causes:
         1. App hasn't processed any requests yet (no logs written)
-        2. Dual logger not initialized (check boot logs for "Dual logger initialized")
-        3. Log directory permissions issue (check chown rails:rails)
+        2. Log directory permissions issue
+        3. Custom log path not configured correctly
       MSG
     end
     
@@ -44,11 +42,8 @@ class Tidewave::Tools::GetLogs < Tidewave::Tools::Base
       return <<~MSG.strip
         Log file exists but is empty: #{log_file}
         
-        This means:
-        - Dual logger initialized successfully
-        - But no logs have been written yet
-        - Try making a request to your app first
-        - Or trigger an exception to test logging
+        This means no logs have been written yet.
+        Try making a request to your app first.
       MSG
     end
 

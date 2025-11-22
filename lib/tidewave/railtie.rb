@@ -6,6 +6,7 @@ require "tidewave/configuration"
 require "tidewave/middleware"
 require "tidewave/quiet_requests_middleware"
 require "tidewave/exceptions_middleware"
+require "tidewave/async_job_logging"
 
 gem_tools_path = File.expand_path("tools/**/*.rb", __dir__)
 Dir[gem_tools_path].each { |f| require f }
@@ -50,6 +51,17 @@ module Tidewave
       # Do not pollute user logs with tidewave requests.
       logger_middleware = app.config.tidewave.logger_middleware || Rails::Rack::Logger
       app.middleware.insert_before(logger_middleware, Tidewave::QuietRequestsMiddleware)
+    end
+
+    # AsyncJob logging: Provides visibility for async-job adapter (no UI/persistence)
+    # Only activates when explicitly enabled via config
+    initializer "tidewave.async_job_logging", after: :load_config_initializers do |app|
+      next unless app.config.tidewave.enabled
+      
+      # Wait for ActiveJob to be fully configured
+      ActiveSupport.on_load(:active_job) do
+        Tidewave::AsyncJobLogging.setup!(app.config.tidewave)
+      end
     end
   end
 end
