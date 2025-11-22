@@ -118,13 +118,15 @@ module Tidewave
       return nil unless enabled
       
       # Calculate tools available based on mode
+      # Note: Actual count varies based on what's installed (async-job, SolidQueue)
+      # This is the base count + commonly available tools
       tools_available = case mode
       when :readonly
-        4  # get_models, get_logs, get_docs, get_source_location
+        6  # get_models, get_logs, get_docs, get_source_location, get_async_job_logs, get_solid_queue_failures
       when :full
-        6  # readonly tools + project_eval + execute_sql_query
+        8  # readonly tools + project_eval + execute_sql_query
       when :local
-        6  # same as full in local dev
+        8  # same as full in local dev
       else
         0
       end

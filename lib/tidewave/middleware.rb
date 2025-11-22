@@ -132,7 +132,7 @@ class Tidewave::Middleware
     case mode
     when :readonly
       # Safe read-only introspection tools only
-      safe_tools = %w[get_models get_logs get_docs get_source_location]
+      safe_tools = %w[get_models get_logs get_docs get_source_location get_async_job_logs get_solid_queue_failures]
       tools.select { |tool| safe_tools.include?(tool.tool_name) }
     when :full
       # All registered tools (shell already removed from routes)
