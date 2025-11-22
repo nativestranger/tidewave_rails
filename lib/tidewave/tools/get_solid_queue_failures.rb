@@ -107,13 +107,21 @@ class Tidewave::Tools::GetSolidQueueFailures < Tidewave::Tools::Base
   def format_arguments(arguments_hash)
     return '' unless arguments_hash.is_a?(Hash)
     
-    # ActiveJob serializes as: { "arguments" => [arg1, arg2, ...] }
-    args = arguments_hash['arguments'] || arguments_hash[:arguments] || []
+    # SolidQueue stores the FULL ActiveJob serialized hash in the arguments column
+    # Structure: { "job_class" => "MyJob", "arguments" => [arg1, arg2, ...], ... }
+    # We need to extract just the arguments array
+    args = arguments_hash['arguments'] || arguments_hash[:arguments]
+    
+    # If no arguments key, this might be a different format - return empty
+    return '' unless args.is_a?(Array)
+    
+    # Return empty string if no args (don't show "[]")
+    return '' if args.empty?
     
     args.map { |arg| format_single_argument(arg) }.join(', ')
   rescue => e
     Rails.logger.warn "[Tidewave] Failed to format arguments: #{e.message}"
-    arguments_hash.to_s
+    ''
   end
   
   # Format a single argument for readability
