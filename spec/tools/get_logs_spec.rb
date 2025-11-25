@@ -62,11 +62,18 @@ describe Tidewave::Tools::GetLogs do
 
     context "when log file doesn't exist" do
       before do
+        # Stub Rails.application.config.tidewave to not respond to production_log_file
+        # so it falls back to Rails.root.join
+        allow(Rails).to receive_message_chain(:application, :config, :tidewave, :respond_to?)
+          .with(:production_log_file).and_return(false)
         allow(Rails).to receive_message_chain(:root, :join).and_return(Pathname.new("nonexistent.log"))
       end
 
       it "returns appropriate message" do
-        expect(described_class.new.call(tail: 10)).to eq("Log file not found")
+        result = described_class.new.call(tail: 10)
+        # New implementation returns detailed message with debug info
+        expect(result).to include("Log file not found")
+        expect(result).to include("nonexistent.log")
       end
     end
   end

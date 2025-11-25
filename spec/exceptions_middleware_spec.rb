@@ -15,19 +15,25 @@ RSpec.describe Tidewave::ExceptionsMiddleware do
             "/app/controllers/test_controller.rb:10:in `show'",
             "/app/lib/some_lib.rb:20:in `process'"
           ])
-          request.set_header("tidewave.exception", exception)
+          # Use the correct header name that the middleware checks
+          request.set_header("action_dispatch.exception", exception)
 
           [ 200, { "Content-Type" => "text/html" }, [ "<html><body><h1>Error Page</h1></body></html>" ] ]
         end
       end
 
       let(:middleware) { described_class.new(downstream_app) }
+      let(:logger) { double("logger", info: nil, error: nil) }
 
       def app
         middleware
       end
 
-      it "includes exception info in response body" do
+      before do
+        allow(Rails).to receive(:logger).and_return(logger)
+      end
+
+      it "logs exception info" do
         # Mock Rails.backtrace_cleaner to return the same backtrace
         backtrace_cleaner = double("backtrace_cleaner")
         allow(Rails).to receive(:backtrace_cleaner).and_return(backtrace_cleaner)
@@ -39,28 +45,9 @@ RSpec.describe Tidewave::ExceptionsMiddleware do
         get "/", {}, { "action_dispatch.request.path_parameters" => { "controller" => "test", "action" => "show" } }
 
         expect(last_response.status).to eq(200)
-
-        expect(last_response.body).to include(<<~TEXT.chomp)
-        <textarea style="display: none;" data-tidewave-exception-info>RuntimeError in TestController#show
-
-        ## Message
-
-        Test error message
-
-        ## Backtrace
-
-        /app/controllers/test_controller.rb:10:in `show&#39;
-        /app/lib/some_lib.rb:20:in `process&#39;
-
-        ## Request info
-
-          * URI: http://example.org/
-          * Query string:\s
-
-        ## Session
-
-            {}</textarea>
-        TEXT
+        # New implementation logs instead of embedding in response
+        expect(logger).to have_received(:error).with(a_string_matching(/RuntimeError in TestController#show/))
+        expect(logger).to have_received(:error).with(a_string_matching(/Test error message/))
       end
 
       it "handles exceptions without controller/action parameters" do
@@ -71,8 +58,8 @@ RSpec.describe Tidewave::ExceptionsMiddleware do
         get "/"
 
         expect(last_response.status).to eq(200)
-        expect(last_response.body).to include("RuntimeError")
-        expect(last_response.body).not_to include("Controller")
+        expect(logger).to have_received(:error).with(a_string_matching(/RuntimeError/))
+        expect(logger).to have_received(:error).with(a_string_matching(/Unknown/))
       end
 
       it "handles exceptions without backtrace" do
@@ -84,8 +71,7 @@ RSpec.describe Tidewave::ExceptionsMiddleware do
         get "/"
 
         expect(last_response.status).to eq(200)
-        expect(last_response.body).to include("RuntimeError")
-        expect(last_response.body).not_to include("## Backtrace")
+        expect(logger).to have_received(:error).with(a_string_matching(/RuntimeError/))
       end
     end
 
