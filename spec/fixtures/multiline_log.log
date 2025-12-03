@@ -1,0 +1,7 @@
+I, [2024-12-02T22:00:00.123456 #12345]  INFO -- : Normal log entry
+I, [2024-12-02T22:30:00.234567 #12345]  ERROR -- : RuntimeError: Something went wrong
+  /app/models/user.rb:10:in `process'
+  /app/controllers/users_controller.rb:5:in `show'
+  /gems/actionpack/lib/action_controller/metal.rb:195:in `dispatch'
+I, [2024-12-02T23:00:00.345678 #12345]  INFO -- : Recovery complete
+
