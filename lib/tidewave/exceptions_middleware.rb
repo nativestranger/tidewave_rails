@@ -22,7 +22,9 @@ class Tidewave::ExceptionsMiddleware
 
   def call(env)
     request = ActionDispatch::Request.new(env)
-    request_id = request.get_header('HTTP_X_REQUEST_ID') || SecureRandom.uuid
+    # CRITICAL: Use Rails' internal UUID (matches X-Vibes-Request-ID header)
+    # This ensures backend exception logs correlate with frontend network captures
+    request_id = request.uuid
     
     begin
       status, headers, body = @app.call(env)

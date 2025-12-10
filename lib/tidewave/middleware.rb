@@ -68,7 +68,9 @@ class Tidewave::Middleware
 
     if path[0] == TIDEWAVE_ROUTE
       # Extract and track request ID for correlation
-      request_id = request.get_header('HTTP_X_REQUEST_ID') || SecureRandom.uuid
+      # CRITICAL: Use Rails' internal UUID from ActionDispatch::RequestId middleware
+      # This matches X-Vibes-Request-ID header and enables frontend ↔ backend correlation
+      request_id = env['action_dispatch.request_id'] || SecureRandom.uuid
       Thread.current[:tidewave_request_id] = request_id
 
       # All routes require authentication
@@ -96,6 +98,10 @@ class Tidewave::Middleware
     # Remove X-Frame-Options headers for non-Tidewave routes to allow embedding.
     # CSP headers are configured in the CSP application environment.
     headers.delete("X-Frame-Options")
+    
+    # Echo Rails' UUID back to frontend for correlation (all responses, not just Tidewave routes)
+    request_id = env['action_dispatch.request_id']
+    headers['X-Vibes-Request-ID'] = request_id if request_id
 
     [ status, headers, body ]
   end
@@ -216,7 +222,8 @@ class Tidewave::Middleware
     response = Rack::Response.new
     response.status = 200
     response.headers["Content-Type"] = "text/plain"
-    response.headers["X-Request-ID"] = request_id if request_id
+    # Echo Rails' UUID for correlation (don't overwrite Fly's X-Request-ID)
+    response.headers["X-Vibes-Request-ID"] = request_id if request_id
 
     response.finish do |res|
       begin
