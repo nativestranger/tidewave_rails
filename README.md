@@ -66,6 +66,99 @@ The following config is available:
 
   * `team` - set your Tidewave Team configuration, such as `config.tidewave.team = { id: "my-company" }`
 
+## Features
+
+### Async Job Logging
+
+Tidewave provides structured logging for async-job executions, filling the visibility gap for async-job's memory/Redis adapter (which has no UI or persistence, unlike SolidQueue's Mission Control or Sidekiq's Web UI).
+
+**Two separate log files for optimal signal-to-noise:**
+- `async_job_exceptions.log` - Failed jobs only (small, scannable, critical)
+- `async_job_runs.log` - All executions (optional, for performance analysis)
+
+**Opt-in configuration** in your `config/initializers/tidewave.rb`:
+
+```ruby
+Rails.application.config.tidewave.tap do |config|
+  # ... existing tidewave config ...
+  
+  # Async job logging (only for async-job adapter)
+  config.async_job_log_exceptions = true  # Always log failures
+  config.async_job_log_runs = true        # Optional: log all executions
+  
+  # Configure paths (important for Docker deployments with volumes)
+  # Default: Rails.root/log/async_job_exceptions.log
+  # For persistent volumes, point to volume-mounted directory:
+  # config.async_job_exceptions_file = '/mnt/data/log/async_job_exceptions.log'
+  # config.async_job_runs_file = '/mnt/data/log/async_job_runs.log'
+  
+  # Optional: customize rotation
+  # config.async_job_exceptions_max_size = 5.megabytes
+  # config.async_job_exceptions_rotations = 2
+  # config.async_job_runs_max_size = 10.megabytes
+  # config.async_job_runs_rotations = 1
+  
+  # Optional: customize logger formatter and level
+  # config.async_job_logger_formatter = proc { |severity, datetime, progname, msg| "#{msg}\n" }
+  # config.async_job_logger_level = Logger::INFO
+  
+  # Optional: provide your own Logger instances (most flexible)
+  # config.async_job_exceptions_logger = Logger.new(STDOUT)
+  # config.async_job_runs_logger = Logger.new(STDOUT)
+end
+```
+
+**Logger configurability** (three levels of control):
+
+1. **Provide custom logger instances** (full control):
+   ```ruby
+   config.async_job_exceptions_logger = MyCustomLogger.new
+   config.async_job_runs_logger = AnotherLogger.new
+   ```
+
+2. **Customize formatter and level** (uses default Logger with your settings):
+   ```ruby
+   config.async_job_logger_formatter = proc { |severity, datetime, progname, msg|
+     "[#{datetime}] #{severity}: #{msg}\n"
+   }
+   config.async_job_logger_level = Logger::DEBUG
+   ```
+
+3. **Use smart defaults** (just enable and go):
+   ```ruby
+   config.async_job_log_exceptions = true
+   # Uses sensible defaults for file paths, rotation, formatting
+   ```
+
+**Accessing logs via MCP:**
+- Tool: `get_async_job_logs`
+- Parameters: `tail` (count), `grep` (filter), `source` ('exceptions' or 'runs')
+- Returns structured JSON with job class, duration, arguments, backtraces
+
+**Why separate logs?**
+1. Exceptions stay small and scannable (find failures fast)
+2. Runs log doesn't drown out critical errors  
+3. Different rotation needs (keep exceptions longer)
+4. Faster MCP parsing (small exception log = fast response)
+
+**Docker deployments with persistent volumes:**
+
+For containerized deployments, configure paths to point to volume-mounted directories to persist logs across container restarts:
+
+```ruby
+# config/initializers/tidewave.rb
+if ENV['USE_MOUNTED_VIBES'] == 'true'
+  config.async_job_log_exceptions = true
+  config.async_job_log_runs = ENV['LOG_SUCCESSFUL_JOBS'] == 'true'
+  
+  # Point to persistent volume (not ephemeral container filesystem)
+  config.async_job_exceptions_file = '/mnt/data/code/log/async_job_exceptions.log'
+  config.async_job_runs_file = '/mnt/data/code/log/async_job_runs.log'
+end
+```
+
+**Note:** SolidQueue jobs are already tracked in database tables and don't need additional logging.
+
 ## Acknowledgements
 
 A thank you to Yorick Jacquin, for creating [FastMCP](https://github.com/yjacquin/fast_mcp) and implementing the initial version of this project.
