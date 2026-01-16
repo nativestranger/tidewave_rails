@@ -2,7 +2,7 @@
 
 Tidewave is the coding agent for full-stack web app development. Integrate Claude Code, OpenAI Codex, and other agents with your web app and web framework at every layer, from UI to database. [See our website](https://tidewave.ai) for more information.
 
-This project can also be used as a standalone Model Context Protocol server for your editors.
+This project can also be used as [a standalone Model Context Protocol server](https://hexdocs.pm/tidewave/mcp.html).
 
 ## Installation
 
@@ -65,6 +65,26 @@ The following config is available:
   * `preferred_orm` - which ORM to use, either `:active_record` (default) or `:sequel`
 
   * `team` - set your Tidewave Team configuration, such as `config.tidewave.team = { id: "my-company" }`
+
+## Available tools
+
+- `execute_sql_query` - executes a SQL query within your application
+  database, useful for the agent to verify the result of an action
+
+- `get_docs` - get the documentation for a given module/class/method.
+  It consults the exact versions used by the project, ensuring you always
+  get correct information
+
+- `get_logs` - reads logs written by the server
+
+- `get_models` - lists all modules in the application and their location
+  for quick discovery
+
+- `get_source_location` - get the source location for a given module/class/method,
+  so an agent can directly read the source skipping search
+
+- `project_eval` - evaluates code within the Rails application itself, giving the agent
+  access to your runtime, dependencies, and in-memory data
 
 ## Acknowledgements
 
