@@ -57,18 +57,18 @@ module Tidewave
     end
 
     # Exception tracking: Captures backend exceptions for AI debugging
-    # Frontend errors tracked by iframe bridge, backend errors tracked here
     # Makes exceptions queryable via get_logs tool
     initializer "tidewave.exceptions" do |app|
       next unless app.config.tidewave.enabled
       
-      # Judo move: Just append to stack, middleware checks for exception internally
+      # Append to stack, middleware checks for exception internally
       # Works with any ShowExceptions implementation (ActionDispatch or ConciseErrors)
-      # No need to detect which middleware is present
       app.config.middleware.use Tidewave::ExceptionsMiddleware
     end
 
     initializer "tidewave.logging" do |app|
+      next unless app.config.tidewave.enabled
+
       # Do not pollute user logs with tidewave requests.
       logger_middleware = app.config.tidewave.logger_middleware || Rails::Rack::Logger
       app.middleware.insert_before(logger_middleware, Tidewave::QuietRequestsMiddleware)
