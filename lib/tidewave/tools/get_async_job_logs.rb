@@ -4,12 +4,11 @@
 # This keeps tidewave generic and doesn't force async-job dependency
 begin
   require "async/job"
-  ASYNC_JOB_AVAILABLE = true
 rescue LoadError
-  ASYNC_JOB_AVAILABLE = false
+  # async-job not available
 end
 
-if ASYNC_JOB_AVAILABLE
+if defined?(Async::Job)
   class Tidewave::Tools::GetAsyncJobLogs < Tidewave::Tools::Base
   tool_name "get_async_job_logs"
   description <<~DESCRIPTION
