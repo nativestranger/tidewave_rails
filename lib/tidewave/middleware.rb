@@ -29,7 +29,6 @@ class Tidewave::Middleware
     @team = config.team
     @project_name = Rails.application.class.module_parent.name
 
-    # OPTIMIZATION: Only load FastMCP if enabled (saves ~20MB + 350ms boot when disabled)
     if config.enabled
       @app = FastMcp.rack_middleware(app,
         name: "tidewave",
@@ -81,9 +80,7 @@ class Tidewave::Middleware
       case [ request.request_method, path ]
       when [ "GET", [ TIDEWAVE_ROUTE, CONFIG_ROUTE ] ]
         return config_endpoint(request)
-      when [ "POST", [ TIDEWAVE_ROUTE, SHELL_ROUTE ] ]
-        # Shell endpoint: programmatic command execution (full mode only)
-        # Benefits over fly ssh: bearer auth, app context, audit trail, agent integration
+      when [ "POST", [ TIDEWAVE_ROUTE, SHELL_ROUTE ] ] # Shell endpoint: programmatic command execution (full mode only)
         unless @config.full_mode?
           return forbidden("Shell endpoint requires full mode (set TIDEWAVE_MODE=full)")
         end
@@ -153,8 +150,7 @@ class Tidewave::Middleware
     end
   end
 
-  # Health check removed - use /vibes/api/health instead (no redundancy)
-  # MCP info available via mcp_info() helper for inclusion in main health endpoint
+  # Health check removed - use /vibes/api/health instead
 
   def config_endpoint(request)
     data = config_data.merge(
@@ -172,8 +168,6 @@ class Tidewave::Middleware
       "mode" => @config.mode.to_s
     }
   end
-  
-  # Removed: mcp_info moved to Configuration class for better encapsulation
 
   def forbidden(message)
     Rails.logger.warn(message)

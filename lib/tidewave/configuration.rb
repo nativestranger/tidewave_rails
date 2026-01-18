@@ -37,7 +37,7 @@ module Tidewave
       
       # Async job logging - provides visibility for async-job adapter
       # Separate opt-in for exceptions vs runs (exceptions more important)
-      @async_job_log_exceptions = false  # Set to true to log failures
+      @async_job_log_exceptions = false  # Set to true to log failures 
       @async_job_log_runs = false        # Set to true to log all executions
       
       # Custom logger instances (most flexible - provide your own Logger)
@@ -112,34 +112,7 @@ module Tidewave
     def full_mode?
       mode == :full
     end
-    
-    # MCP info for health endpoint (must be public for health controller)
-    def mcp_info_for_health
-      return nil unless enabled
-      
-      # Calculate tools available based on mode
-      # Note: Actual count varies based on what's installed (async-job, SolidQueue)
-      # This is the base count + commonly available tools
-      tools_available = case mode
-      when :readonly
-        6  # get_models, get_logs, get_docs, get_source_location, get_async_job_logs, get_solid_queue_failures
-      when :full
-        8  # readonly tools + project_eval + execute_sql_query
-      when :local
-        8  # same as full in local dev
-      else
-        0
-      end
-      
-      {
-        enabled: true,
-        mode: mode.to_s,
-        tools_available: tools_available,
-        version: Tidewave::VERSION,
-        endpoint: '/tidewave/mcp'
-      }
-    end
-    
+
     private
     
     # Default log path for async job logs

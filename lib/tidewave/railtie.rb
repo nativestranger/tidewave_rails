@@ -39,14 +39,14 @@ module Tidewave
     initializer "tidewave.setup" do |app|
       # Skip if not explicitly enabled
       unless app.config.tidewave.enabled
-        Rails.logger.info "[Tidewave] Skipped: not enabled (set config.tidewave.enabled = true or USE_MOUNTED_VIBES=true)"
+        Rails.logger.info "[Tidewave] Skipped: not enabled (set config.tidewave.enabled = true)"
         next
       end
 
       # In local dev, no restrictions. In production, require explicit opt-in.
       unless app.config.enable_reloading || app.config.tidewave.production_mode?
         Rails.logger.warn "[Tidewave] Skipped: not in development and not in production mode"
-        next
+        raise "Tidewave not set up properly - must have enable_reloading as true or be explicitly enabled to run in production_mode"
       end
 
       app.config.middleware.insert_after(
@@ -56,13 +56,11 @@ module Tidewave
       )
     end
 
-    # Exception tracking: Captures backend exceptions for AI debugging
-    # Makes exceptions queryable via get_logs tool
+    # Exception tracking: Captures backend exceptions — makes exceptions queryable via get_logs tool
     initializer "tidewave.exceptions" do |app|
       next unless app.config.tidewave.enabled
       
-      # Append to stack, middleware checks for exception internally
-      # Works with any ShowExceptions implementation (ActionDispatch or ConciseErrors)
+      # Append to stack, middleware checks for exception internally — works with any ShowExceptions implementation (ActionDispatch or ConciseErrors)
       app.config.middleware.use Tidewave::ExceptionsMiddleware
     end
 
