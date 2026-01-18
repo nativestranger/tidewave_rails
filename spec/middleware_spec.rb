@@ -262,6 +262,103 @@ RSpec.describe Tidewave::Middleware do
     end
   end
 
+  describe "authentication" do
+    before do
+      # Disable local dev mode to test actual auth
+      allow(config).to receive(:local_dev?).and_return(false)
+      # Set a shared secret
+      allow(config).to receive(:shared_secret).and_return("test-secret-123")
+      # Allow remote access so IP check doesn't interfere
+      config.allow_remote_access = true
+    end
+
+    context "with correct bearer token" do
+      it "allows access to /tidewave/config" do
+        header "Authorization", "Bearer test-secret-123"
+        get "/tidewave/config"
+        expect(last_response.status).to eq(200)
+        expect(last_response.headers["Content-Type"]).to eq("application/json")
+      end
+
+      it "allows access to /tidewave/mcp" do
+        header "Authorization", "Bearer test-secret-123"
+        get "/tidewave/mcp"
+        expect(last_response.status).to eq(200)
+      end
+    end
+
+    context "without bearer token" do
+      it "returns 401 for /tidewave/config" do
+        get "/tidewave/config"
+        expect(last_response.status).to eq(401)
+        expect(last_response.headers["Content-Type"]).to eq("application/json")
+        
+        body = JSON.parse(last_response.body)
+        expect(body["error"]).to eq("Unauthorized")
+        expect(body["hint"]).to include("TIDEWAVE_SHARED_SECRET")
+      end
+
+      it "returns 401 for /tidewave/mcp" do
+        get "/tidewave/mcp"
+        expect(last_response.status).to eq(401)
+      end
+    end
+
+    context "with incorrect bearer token" do
+      it "returns 401 for /tidewave/config" do
+        header "Authorization", "Bearer wrong-secret"
+        get "/tidewave/config"
+        expect(last_response.status).to eq(401)
+        
+        body = JSON.parse(last_response.body)
+        expect(body["error"]).to eq("Unauthorized")
+      end
+
+      it "returns 401 for /tidewave/mcp" do
+        header "Authorization", "Bearer wrong-secret"
+        get "/tidewave/mcp"
+        expect(last_response.status).to eq(401)
+      end
+    end
+
+    context "with malformed authorization header" do
+      it "returns 401 when missing 'Bearer ' prefix" do
+        header "Authorization", "test-secret-123"
+        get "/tidewave/config"
+        expect(last_response.status).to eq(401)
+      end
+
+      it "returns 401 for empty authorization header" do
+        header "Authorization", ""
+        get "/tidewave/config"
+        expect(last_response.status).to eq(401)
+      end
+    end
+
+    context "when no shared_secret is configured" do
+      before do
+        allow(config).to receive(:shared_secret).and_return(nil)
+      end
+
+      it "returns 401 even with bearer token" do
+        header "Authorization", "Bearer test-secret-123"
+        get "/tidewave/config"
+        expect(last_response.status).to eq(401)
+      end
+    end
+
+    context "in local dev mode" do
+      before do
+        allow(config).to receive(:local_dev?).and_return(true)
+      end
+
+      it "bypasses auth check and allows access without token" do
+        get "/tidewave/config"
+        expect(last_response.status).to eq(200)
+      end
+    end
+  end
+
   describe "edge cases" do
     it "handles trailing slashes" do
       get "/tidewave/"

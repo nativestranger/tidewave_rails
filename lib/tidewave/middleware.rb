@@ -114,9 +114,9 @@ class Tidewave::Middleware
     return false unless @config.shared_secret.present?
     
     auth_header = request.get_header('HTTP_AUTHORIZATION')
-    return false unless auth_header
+    return false unless auth_header&.start_with?('Bearer ')
     
-    token = auth_header.to_s.sub(/^Bearer /, '')
+    token = auth_header[7..-1] # Extract token after "Bearer "
     ActiveSupport::SecurityUtils.secure_compare(token, @config.shared_secret)
   end
   
